@@ -1,0 +1,36 @@
+# config/cliente_001.yaml
+# Completar con los datos que envía el cliente
+
+client_name: "Cliente Ejemplo S.A."
+
+# URLs de TUS APIs — solo se capturan calls a estas
+api_base_urls:
+  - "https://api.tuempresa.com"
+  - "https://sandbox.tuempresa.com"
+
+# Acceso al sandbox del cliente
+login:
+  url: "https://sandbox.cliente.com/login"
+  username_selector: "#username"
+  password_selector: "#password"
+  submit_selector: "#btn-login"
+  username: "usuario_prueba"
+  password: "clave_prueba"
+
+# Flujo de navegación del cliente
+steps:
+  - action: navigate
+    url: "https://sandbox.cliente.com/dashboard"
+
+  - action: click
+    selector: "#btn-nueva-orden"
+
+  - action: fill
+    selector: "#campo-monto"
+    value: "1000"
+
+  - action: click
+    selector: "#btn-confirmar"
+
+  - action: wait
+    value: "2000"

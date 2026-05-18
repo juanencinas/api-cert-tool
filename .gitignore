@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+*.egg-info/
+
+# Reports generados
+reports/output/
+
+# Configs con credenciales reales (usar _ejemplo como plantilla)
+config/cliente_*.yaml
+!config/cliente_001.yaml
+
+# OS
+.DS_Store

@@ -1,5 +1,6 @@
 """
-generator.py — Genera el certificado formal en HTML y PDF
+generator.py — Genera el certificado formal en HTML
+(PDF desactivado en Mac — usar HTML directamente)
 """
 
 from datetime import datetime
@@ -16,7 +17,7 @@ TEMPLATE = """
   h1 { color: #0f3460; border-bottom: 3px solid #e94560; padding-bottom: 10px; }
   h2 { color: #0f3460; margin-top: 30px; }
   .summary { display: flex; gap: 20px; margin: 20px 0; }
-  .badge { padding: 16px 28px; border-radius: 8px; text-align: center; }
+  .badge { padding: 16px 28px; border-radius: 8px; text-align: center; min-width: 80px; }
   .pass { background: #d4edda; color: #155724; }
   .fail { background: #f8d7da; color: #721c24; }
   .total { background: #d1ecf1; color: #0c5460; }
@@ -27,7 +28,9 @@ TEMPLATE = """
   .FAIL { color: #721c24; font-weight: bold; }
   .issues { color: #856404; font-size: 12px; }
   .footer { margin-top: 40px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 16px; }
-  .certified { background: #0f3460; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0; }
+  .certified { padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0; color: white; }
+  .certified.ok { background: #0f3460; }
+  .certified.warn { background: #e94560; }
 </style>
 </head>
 <body>
@@ -48,11 +51,9 @@ TEMPLATE = """
   </div>
 
   {% if failed == 0 %}
-  <div class="certified">✅ INTEGRACIÓN CERTIFICADA — Todos los endpoints cumplen el contrato</div>
+  <div class="certified ok">✅ INTEGRACIÓN CERTIFICADA — Todos los endpoints cumplen el contrato</div>
   {% else %}
-  <div class="certified" style="background:#e94560;">
-    ⚠️ CERTIFICACIÓN PENDIENTE — Se encontraron {{ failed }} hallazgo(s)
-  </div>
+  <div class="certified warn">⚠️ CERTIFICACIÓN PENDIENTE — Se encontraron {{ failed }} hallazgo(s)</div>
   {% endif %}
 
   <h2>Detalle por endpoint</h2>
@@ -69,8 +70,7 @@ TEMPLATE = """
   </table>
 
   <div class="footer">
-    Generado automáticamente por la Herramienta de Certificación de APIs.<br>
-    Fecha de emisión: {{ date }} | Versión contrato: {{ api_version }}
+    Generado automáticamente · Herramienta de Certificación de APIs · {{ date }}
   </div>
 </body>
 </html>
@@ -108,15 +108,9 @@ class ReportGenerator:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         path = output_dir / f"certificado_{client}_{timestamp}.html"
 
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(html)
 
-        try:
-            from weasyprint import HTML
-            pdf_path = str(path).replace(".html", ".pdf")
-            HTML(string=html).write_pdf(pdf_path)
-            print(f"  → PDF generado: {pdf_path}")
-            return pdf_path
-        except ImportError:
-            print("  → WeasyPrint no instalado, reporte en HTML")
-            return str(path)
+        print(f"  → Reporte HTML generado: {path}")
+        print(f"  → Abre con: open {path}")
+        return str(path)

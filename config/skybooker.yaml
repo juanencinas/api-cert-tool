@@ -1,0 +1,87 @@
+# config/skybooker.yaml
+# Cliente: SkyBooker - Ideeo Vuelos Test
+# API Base: https://preprod.netactica.com/NetCoreApi
+
+client_name: "SkyBootker - Ideeo Vuelos Test"
+
+api_base_urls:
+  - "preprod.netactica.com"
+
+login:
+  url: "https://viajes.suitebusinesspro.io/"
+
+modules:
+  - Air
+
+steps:
+  - action: navigate
+    url: "https://viajes.suitebusinesspro.io/"
+
+  - action: wait
+    value: "2000"
+
+  # Origen
+  - action: triple_click
+    selector: "input[placeholder*='Ciudad de México']"
+
+  - action: fill
+    selector: "input[placeholder*='Ciudad de México']"
+    value: "MEX"
+
+  - action: wait
+    value: "1500"
+
+  - action: press_key
+    value: "ArrowDown"
+
+  - action: press_key
+    value: "Enter"
+
+  - action: wait
+    value: "800"
+
+  # Destino
+  - action: triple_click
+    selector: "input[placeholder*='Miami']"
+
+  - action: fill
+    selector: "input[placeholder*='Miami']"
+    value: "MIA"
+
+  - action: wait
+    value: "1500"
+
+  - action: press_key
+    value: "ArrowDown"
+
+  - action: press_key
+    value: "Enter"
+
+  - action: wait
+    value: "800"
+
+  # Fecha — clic via JS buscando el botón con texto "Fecha"
+  - action: js
+    value: |
+      Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Fecha')?.click()
+
+  - action: wait
+    value: "1200"
+
+  # Seleccionar primer día habilitado via JS
+  - action: js
+    value: |
+      const days = Array.from(document.querySelectorAll('button[name="day"]')).filter(b => !b.disabled)
+      if (days.length > 0) days[0].click()
+
+  - action: wait
+    value: "800"
+
+  # Buscar vuelos via JS también por seguridad
+  - action: js
+    value: |
+      Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim().includes('Buscar vuelos'))?.click()
+
+  # Esperar Session + Air/Search + Air/Results
+  - action: wait
+    value: "12000"

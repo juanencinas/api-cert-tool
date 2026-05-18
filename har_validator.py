@@ -27,7 +27,7 @@ FLOWS = {
         {"step": 5, "name": "Air Book",                   "path": "/Air/Book"},
         {"step": 6, "name": "Air Issue",                  "path": "/Air/Issue"},
         {"step": 7, "name": "Ancillary Search by Option", "path": "/Air/Ancillary/SearchByOption"},
-        {"step": 8, "name": "Seatmap",                    "path": "/Air/Seatmap"},
+        {"step": 8, "name": "Seatmap",                    "path": "/seatmap/"},
         {"step": 9, "name": "Air Ancillary Book",         "path": "/Air/Ancillary/Book"},
     ],
     "convergence_hotel": [
@@ -130,14 +130,11 @@ def validate_calls(api_calls: list, swagger_endpoints: list) -> list:
 def validate_flow(called: set, flow_name: str) -> list:
     results = []
     for step in FLOWS.get(flow_name, []):
+        # Buscar si algún endpoint llamado contiene el path del paso
+        # Soporta paths con parámetros dinámicos (ej: /seatmap/123/456/1)
         found = any(step["path"].lower() in c.lower() for c in called)
-        if not found and "seatmap" in step["path"].lower():
-            found = any("seatmap" in c.lower() for c in called)
-            status = "WARN" if found else "FAIL"
-            called_as = next((c for c in called if "seatmap" in c.lower()), "No llamado")
-        else:
-            status = "PASS" if found else "FAIL"
-            called_as = step["path"] if found else "No llamado"
+        status = "PASS" if found else "FAIL"
+        called_as = next((c for c in called if step["path"].lower() in c.lower()), "No llamado")
         results.append({**step, "status": status, "called_as": called_as})
     return results
 
@@ -163,32 +160,26 @@ TEMPLATE = """<!DOCTYPE html>
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Inter', sans-serif; background: #f7f7f5; color: var(--black); }
-
   .header { background: var(--gray-xdk); border-bottom: 4px solid var(--yellow); }
   .header-inner { max-width: 960px; margin: 0 auto; padding: 32px 40px; display: flex; align-items: center; justify-content: space-between; }
   .logo h1 { font-size: 22px; font-weight: 800; color: var(--white); }
   .logo h1 span { color: var(--yellow); }
   .logo p { color: #aaa; font-size: 12px; margin-top: 3px; }
   .header-badge { background: var(--yellow); color: var(--black); font-weight: 700; font-size: 11px; padding: 8px 18px; border-radius: 20px; letter-spacing: .3px; }
-
   .container { max-width: 960px; margin: 28px auto; padding: 0 24px; }
-
   .banner { background: var(--gray-xdk); border-left: 6px solid {{ banner_color }}; border-radius: 10px; padding: 22px 28px; margin-bottom: 22px; display: flex; align-items: center; gap: 18px; }
   .banner-icon { font-size: 32px; flex-shrink: 0; }
   .banner h2 { color: var(--white); font-size: 17px; font-weight: 700; margin-bottom: 4px; }
   .banner p { color: #bbb; font-size: 13px; }
-
   .card { background: var(--white); border-radius: 12px; padding: 22px 26px; margin-bottom: 18px; border: 1px solid var(--border); }
   .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--gray-dk); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid var(--yellow); display: flex; align-items: center; gap: 8px; }
   .card-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background: var(--yellow); border-radius: 2px; }
-
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .info-item label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray-dk); margin-bottom: 2px; }
   .info-item span { font-size: 13px; font-weight: 500; }
-
   .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
   .stat { background: var(--gray-xdk); border-radius: 10px; padding: 18px; text-align: center; border-bottom: 3px solid transparent; }
-  .stat.total { border-color: var(--yellow); }
+  .stat.total  { border-color: var(--yellow); }
   .stat.s-pass { border-color: #4CAF50; }
   .stat.s-warn { border-color: #FF9800; }
   .stat.s-fail { border-color: #f44336; }
@@ -198,50 +189,40 @@ TEMPLATE = """<!DOCTYPE html>
   .stat.s-pass .num { color: #81C784; }
   .stat.s-warn .num { color: #FFB74D; }
   .stat.s-fail .num { color: #e57373; }
-
   .progress-bar { background: #eee; border-radius: 8px; height: 10px; overflow: hidden; }
   .progress-fill { height: 10px; border-radius: 8px; background: linear-gradient(90deg, var(--yellow), var(--yellow-md)); }
   .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray-dk); margin-top: 6px; }
-
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   thead tr { background: var(--gray-xdk); }
   thead th { padding: 11px 14px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--yellow); }
   tbody tr { border-bottom: 1px solid #f0f0f0; }
   tbody tr:hover td { background: #fafafa; }
   tbody td { padding: 10px 14px; vertical-align: middle; }
-  .row-warn td { background: var(--yellow-lt) !important; }
   .row-fail td { background: #fff5f5 !important; }
   .num-col { text-align: center; color: var(--gray-dk); font-weight: 600; width: 40px; }
   .mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--gray-xdk); }
   .obs { font-size: 12px; color: var(--gray-dk); }
   code { background: var(--yellow-lt); border: 1px solid var(--yellow-md); padding: 1px 6px; border-radius: 4px; font-size: 11px; font-family: 'Courier New', monospace; }
-
   .badge { padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
   .badge.pass { background: #E8F5E9; color: #2E7D32; }
-  .badge.warn { background: var(--yellow-lt); color: #8B6914; border: 1px solid var(--yellow-md); }
   .badge.fail { background: #FFEBEE; color: #C62828; }
-
   .actions-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
   .actions-list li { background: var(--yellow-lt); border-left: 4px solid var(--yellow); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; line-height: 1.5; }
-
   .footer { background: var(--gray-dk); color: #ccc; text-align: center; padding: 18px; font-size: 12px; margin-top: 28px; border-top: 3px solid var(--yellow); }
   .footer strong { color: var(--yellow); }
 </style>
 </head>
 <body>
-
 <div class="header">
   <div class="header-inner">
     <div class="logo">
       <h1>neta<span>ctica</span></h1>
       <p>Plataforma de Certificación de Integraciones API</p>
     </div>
-    <div class="header-badge">🔐 CERTIFICACIÓN {{ flow_label | upper }}</div>
+    <div class="header-badge">🔐 {{ flow_label | upper }}</div>
   </div>
 </div>
-
 <div class="container">
-
   <div class="banner">
     <div class="banner-icon">{{ banner_icon }}</div>
     <div>
@@ -249,7 +230,6 @@ TEMPLATE = """<!DOCTYPE html>
       <p>{{ banner_desc }}</p>
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">Información del cliente</div>
     <div class="info-grid">
@@ -261,7 +241,6 @@ TEMPLATE = """<!DOCTYPE html>
       <div class="info-item"><label>Fecha de Evaluación</label><span>{{ date }}</span></div>
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">Resumen</div>
     <div class="stats">
@@ -276,33 +255,26 @@ TEMPLATE = """<!DOCTYPE html>
       <span><strong>{{ coverage }}%</strong> — {{ passed + warnings }}/{{ total_steps }} pasos</span>
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">Detalle del flujo obligatorio</div>
     <table>
-      <thead><tr><th>#</th><th>Paso</th><th>Endpoint contrato</th><th>Estado</th><th>Observación</th></tr></thead>
+      <thead><tr><th>#</th><th>Paso</th><th>Endpoint</th><th>Llamado como</th><th>Estado</th></tr></thead>
       <tbody>
         {% for r in flow_results %}
-        <tr class="{{ 'row-warn' if r.status=='WARN' else ('row-fail' if r.status=='FAIL' else '') }}">
+        <tr class="{{ 'row-fail' if r.status=='FAIL' else '' }}">
           <td class="num-col">{{ r.step }}</td>
           <td><strong>{{ r.name }}</strong></td>
           <td class="mono">{{ r.path }}</td>
+          <td class="mono">{{ r.called_as if r.status == 'PASS' else '—' }}</td>
           <td>
             {% if r.status == 'PASS' %}<span class="badge pass">✅ PASS</span>
-            {% elif r.status == 'WARN' %}<span class="badge warn">⚠️ REVISAR</span>
             {% else %}<span class="badge fail">❌ FALTANTE</span>{% endif %}
-          </td>
-          <td class="obs">
-            {% if r.status == 'PASS' %}—
-            {% elif r.status == 'WARN' %}Llamado como <code>{{ r.called_as }}</code> — verificar path vs contrato
-            {% else %}Endpoint no fue llamado en el flujo certificado{% endif %}
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-
   {% if actions %}
   <div class="card">
     <div class="card-title">Acciones requeridas</div>
@@ -311,9 +283,7 @@ TEMPLATE = """<!DOCTYPE html>
     </ul>
   </div>
   {% endif %}
-
 </div>
-
 <div class="footer">
   Generado automáticamente por la <strong>Herramienta de Certificación de APIs · Netactica</strong> · {{ date }}
 </div>
@@ -344,7 +314,7 @@ def generate_report(config: dict, flow_results: list, call_results: list, flow_n
         banner_color = "#f44336"
         banner_icon  = "⚠️"
         banner_title = "Certificación Pendiente"
-        banner_desc  = f"Faltan {failed} endpoint(s) y hay {warnings} observación(es). El cliente debe completar su implementación."
+        banner_desc  = f"Faltan {failed} endpoint(s). El cliente debe completar su implementación."
 
     actions = []
     for r in flow_results:
@@ -391,7 +361,7 @@ def main():
 
     if len(sys.argv) < 4:
         print("Uso: python har_validator.py <config.yaml> <swagger.json> <archivo.har> [flow]")
-        print("Flows:", ", ".join(FLOWS.keys()))
+        print("Flows disponibles:", ", ".join(FLOWS.keys()))
         sys.exit(1)
 
     config_path  = sys.argv[1]
